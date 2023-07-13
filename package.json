@@ -48,5 +48,8 @@
   "bugs": {
     "url": "https://github.com/urbit/azimuth/issues"
   },
-  "homepage": "https://github.com/urbit/azimuth#readme"
+  "homepage": "https://github.com/urbit/azimuth#readme",
+  "bundleDependencies": [
+    "openzeppelin-solidity"
+  ]
 }

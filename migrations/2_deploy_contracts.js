@@ -8,6 +8,8 @@ var LinearStarRelease = artifacts.require("LinearStarRelease");
 var ConditionalStarRelease = artifacts.require("ConditionalStarRelease");
 var Naive = artifacts.require("Naive");
 
+var Husk = artifacts.require("Husk");
+
 const WITH_TEST_STATE = process.argv[3] === "with-state";
 
 const windup = 20;
@@ -31,6 +33,8 @@ module.exports = async function(deployer, network, accounts) {
   const claims = await deployer.deploy(Claims, azimuth.address);
   const censures = await deployer.deploy(Censures, azimuth.address);
   const naive = await deployer.deploy(Naive);
+
+  const husk = await deployer.deploy(Husk, azimuth.address);
 
 
   //NOTE  for real deployment, use a real ENS registry
