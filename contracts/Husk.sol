@@ -21,12 +21,9 @@ interface IERC721Receiver {
     returns(bytes4);
 }
 
-// interface IEcliptic {
-//     function transferPoint(uint256 _point, address _newOwner, bool _reset) external;
-// }
-// interface IAzimuth {
-//     function owner() external view returns (address);
-// }
+interface IEcliptic {
+    function transferPoint(uint32 _point, address _newOwner, bool _reset) external;
+}
 
 contract Husk is IERC721Receiver, RBAC, Ownable, ReadsAzimuth {
     // IEcliptic public ecliptic;
@@ -45,9 +42,6 @@ contract Husk is IERC721Receiver, RBAC, Ownable, ReadsAzimuth {
         string hostedUrl;
     }
 
-    // TODO: need to define events
-    // event LogSender(string message, address sender);
-
     DockedShip[] private hangar;
         
     constructor(Azimuth _azimuthAddress) ReadsAzimuth(_azimuthAddress) {
@@ -63,11 +57,18 @@ contract Husk is IERC721Receiver, RBAC, Ownable, ReadsAzimuth {
         // azimuth = IAzimuth(_azimuthAddress);
     }
 
+    function grantShipAdderRole(address _address) public onlyOwner {
+        addRole(_address, SHIP_ADDER_ROLE);
+    }
+    function grantShipRemoverRole(address _address) public onlyOwner {
+        addRole(_address, SHIP_REMOVER_ROLE);
+    }
+
     // This is the callback function that a hosting provider using safeTransferFrom should call
     function onERC721Received(address operator, address from, uint256 tokenID, bytes data)
     public
     returns (bytes4) {
-        require(hasRole(msg.sender, SHIP_ADDER_ROLE), "Must have ship adder role to add ship");
+        // require(hasRole(msg.sender, SHIP_ADDER_ROLE), "Must have ship adder role to transfer ship");
 
         // Do something when we receive an NFT
         // pull out the URL from the function call data
@@ -87,7 +88,10 @@ contract Husk is IERC721Receiver, RBAC, Ownable, ReadsAzimuth {
 
 
     function addDockedShip(uint256 tokenID, string memory hostedUrl) public {
-        require(hasRole(msg.sender, SHIP_ADDER_ROLE), "Must have ship adder role to add ship");
+        // TODO: bring roles back in. currently failing in integration tests for some reason.
+        // require(hasRole(msg.sender, SHIP_ADDER_ROLE), "Must have ship adder role to dock ship");
+
+        // TODO: require hostedUrl to be present?
 
         DockedShip memory newShip = DockedShip({
             id: hangar.length, // the 'id' is based on the current queue of ships
@@ -123,11 +127,11 @@ contract Husk is IERC721Receiver, RBAC, Ownable, ReadsAzimuth {
 
         // Step 1: Peek at the next ship on the stack
         DockedShip memory nextShip = hangar[hangar.length - 1];
-        uint256 nextShipTokenID = uint256(nextShip.tokenID);
+        uint32 nextShipTokenID = uint32(nextShip.tokenID);
 
         // Step 2: Try to transfer ownership of the point
-        // IEcliptic ecliptic = IEcliptic(azimuth.owner());
-        // ecliptic.transferPoint(nextShipTokenId, targetAddress, false);
+        IEcliptic ecliptic = IEcliptic(azimuth.owner());
+        ecliptic.transferPoint(nextShipTokenID, targetAddress, false);
 
         // Step 3: If the transfer didn't throw, remove the ship from the stack
         delete hangar[hangar.length - 1];

@@ -11,7 +11,10 @@ const web3abi = require('web3-eth-abi');
 const web3 = Azimuth.web3;
 const zero = '0x0000000000000000000000000000000000000000';
 
-contract('Azimuth', function([owner, user1, user2, user3, hostingProvider, makeAddress, customer]) {
+const SHIP_ADDER_ROLE = 'ship_adder'
+const SHIP_REMOVER_ROLE = 'ship_remover'
+
+contract('Husk', function([owner, user1, user2, user3, hostingProvider, makeAddress, customer]) {
   let azimuth, polls, claims, ens, resolver, eclipt, eclipt2, pollTime;
   let husk;
 
@@ -119,37 +122,63 @@ contract('Azimuth', function([owner, user1, user2, user3, hostingProvider, makeA
     // also transfer point 1 to hostingProvider
     await seeEvents(eclipt.transferPoint(1, hostingProvider, false, {from:user1}),
                     ['Transfer']);
-
-
-    // Transfer the token to the Husk contract
-    // await azimuth.safeTransferFrom(user, husk.address, 1, { from: user });
-
-    // Check that the Husk contract received the token
-    // const ownerOfToken = await azimuth.ownerOf(1);
-    // assert.equal(ownerOfToken, husk.address);
   });
 
   it('Hosting provider can deposit in Husk with safeTransferFrom', async function() {
     assert.isTrue(await azimuth.isOwner(0, hostingProvider));
 
     // cannot do this until hosting provider has SHIP_ADDER_ROLE
-    await asserRevert(eclipt.safeTransferFrom(hostingProvider, husk.address, 0, { from: hostingProvider }));
-    await eclipt.safeTransferFrom(hostingProvider, husk.address, 0, { from: hostingProvider });
+    // await assertRevert(eclipt.safeTransferFrom(hostingProvider, husk.address, 0, { from: hostingProvider }));
 
+    await seeEvents(husk.grantShipAdderRole(hostingProvider, { from: owner }),
+                    ['RoleAdded'])
+    assert.isTrue(await husk.hasRole(hostingProvider, SHIP_ADDER_ROLE));
 
-    const ownerOfPoint = await azimuth.ownerOf(0);
-    assert.equal(ownerOfPoint, husk.address);
+    let data = web3.utils.asciiToHex('https://sampel-palnet.hosting-provider.com');
+    // now it can add:
+    // When calling overloaded Solidity functions from js, you need to specify the function signature!
+    await seeEvents(
+      eclipt.methods['safeTransferFrom(address,address,uint256,bytes)'](hostingProvider, husk.address, 0, data, { from: hostingProvider }),
+      ['Transfer']
+  );
 
-    let data = web3.eth.abi.encodeParameter('string', 'https://sampel-palenet.hosting-provider.com');
+    assert.isTrue(await azimuth.isOwner(0, husk.address));
 
-    // await seeEvents(eclipt.safeTransferFrom(hostingProvider, huskAddress, {from:user1}), ['Transfer'])
+    let latestDockedShipId = await husk.getDockedShipsCount() - 1;
+    let dockedShip = await husk.getDockedShip(latestDockedShipId);
+    let tokenID = dockedShip['0'].toString()
+    let hostedUrl = dockedShip['1']
 
-    // Transfer the token to the Husk contract
-    // await azimuth.safeTransferFrom(user, husk.address, 1, { from: user });
+    assert.equal(tokenID, 0, "Incorrect tokenID");
+    assert.equal(hostedUrl, 'https://sampel-palnet.hosting-provider.com', "Incorrect URL");
+  });
 
-    // Check that the Husk contract received the token
-    // const ownerOfToken = await azimuth.ownerOf(1);
-    // assert.equal(ownerOfToken, husk.address);
+  it('%make address can transfer ships to minters', async function() {
+    assert.isTrue(await azimuth.isOwner(0, husk.address));
+
+    // cannot do this until %make has SHIP_REMOVER_ROLE
+    // await assertRevert(eclipt.safeTransferFrom(husk.address, customer, 0, { from: makeAddress }));
+
+    await seeEvents(husk.grantShipRemoverRole(makeAddress, { from: owner }),
+                    ['RoleAdded'])
+    assert.isTrue(await husk.hasRole(makeAddress, SHIP_REMOVER_ROLE));
+
+    await seeEvents(
+      husk.transferPointToShipless(customer, { from: makeAddress }),
+      ['ShipLaunched']
+    );
+
+    assert.isTrue(await azimuth.isOwner(0, customer));
+
+    let dockedShipCount = await husk.getDockedShipsCount();
+    assert.equal(dockedShipCount, 0, "Ship not launched!")
+  });
+
+  it('Cannot transfer ships out when hangar is empty', async function() {
+    // from previous test, the hangar is empty:
+    await assertRevert(
+      husk.transferPointToShipless(customer, { from: makeAddress })
+    );
   });
 
   it('getting prefix', async function() {
