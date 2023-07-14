@@ -3,30 +3,38 @@ pragma solidity 0.4.24;
 
 import './ReadsAzimuth.sol';
 
-import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
+// import "openzeppelin-solidity/contracts/token/ERC721/IERC721Receiver.sol";
+import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+// import "openzeppelin-solidity/contracts/access/AccessControl.sol";
+import "openzeppelin-solidity/contracts/access/rbac/RBAC.sol";
 
 // azimuth address: 0x33EeCbf908478C10614626A9D304bfe18B78DD73
 // azimuth goerli:  0xbB61Fa683E4B910418E27b00a1438a936234df52
 // keccak256 encoded "SHIP_ADDER_ROLE": 0x381e9228496910d7a11e0b24564a256a78aa4897f0fdba78b8dd41d88f34e8a9
 // keccak256 encoded "SHIP_REMOVER_ROLE": 0x5cbc5b59bdfae9f0aaf4938e5a095024e97b6493a564f95fbb82ddcdbafdc969
 
-interface IEcliptic {
-    function transferPoint(uint256 _point, address _newOwner, bool _reset) external;
-}
-interface IAzimuth {
-    function owner() external view returns (address);
+// we need to define this, rather than importing from openzeppelin, because their
+// version uses 0.8.x and can't use that with Azimuth's 0.4.x
+interface IERC721Receiver {
+    function onERC721Received(address operator, address from, uint256 tokenId, bytes data)
+    public
+    returns(bytes4);
 }
 
+// interface IEcliptic {
+//     function transferPoint(uint256 _point, address _newOwner, bool _reset) external;
+// }
+// interface IAzimuth {
+//     function owner() external view returns (address);
+// }
 
-contract Husk is IERC721Receiver, AccessControl, Ownable {
+contract Husk is IERC721Receiver, RBAC, Ownable, ReadsAzimuth {
     // IEcliptic public ecliptic;
     // Ecliptic public ecliptic;
-    IAzimuth public azimuth;
+    // IAzimuth public azimuth;
 
-    bytes32 public constant SHIP_ADDER_ROLE = keccak256("SHIP_ADDER_ROLE");
-    bytes32 public constant SHIP_REMOVER_ROLE = keccak256("SHIP_REMOVER_ROLE");
+    string public constant SHIP_ADDER_ROLE = "ship_adder";
+    string public constant SHIP_REMOVER_ROLE = "ship_remover";
 
     event ShipDocked(uint256 indexed tokenID, string hostedUrl);
     event ShipLaunched(uint256 indexed tokenID, address indexed owner, string hostedUrl);
@@ -45,25 +53,26 @@ contract Husk is IERC721Receiver, AccessControl, Ownable {
     constructor(Azimuth _azimuthAddress) ReadsAzimuth(_azimuthAddress) {
         // since the constructor creates these roles, the contract owner is the 'admin' for these roles.
         // and the contract owner is the DEFAULT_ADMIN_ROLE, which means nobody else can call _setupRole
-        _setupRole(SHIP_ADDER_ROLE, msg.sender);
-        _setupRole(SHIP_REMOVER_ROLE, msg.sender);
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        /// _setupRole(SHIP_ADDER_ROLE, msg.sender);
+        /// _setupRole(SHIP_REMOVER_ROLE, msg.sender);
+        addRole(msg.sender, SHIP_ADDER_ROLE);
+        addRole(msg.sender, SHIP_REMOVER_ROLE);
+        // _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
 
         // azimuth = IAzimuth(_azimuthAddress);
     }
 
     // This is the callback function that a hosting provider using safeTransferFrom should call
-    function onERC721Received(address operator, address from, uint256 tokenID, bytes memory data)
+    function onERC721Received(address operator, address from, uint256 tokenID, bytes data)
     public
-    override
     returns (bytes4) {
-        require(hasRole(SHIP_ADDER_ROLE, msg.sender), "Must have ship adder role to add ship");
-        
+        require(hasRole(msg.sender, SHIP_ADDER_ROLE), "Must have ship adder role to add ship");
+
         // Do something when we receive an NFT
         // pull out the URL from the function call data
-        string memory url = abi.decode(data, (string));
-        
+        string memory url = string(data);
+
         // Add it to the hangar (addDockedShip will create the struct)
         addDockedShip(tokenID, url);
 
@@ -78,7 +87,7 @@ contract Husk is IERC721Receiver, AccessControl, Ownable {
 
 
     function addDockedShip(uint256 tokenID, string memory hostedUrl) public {
-        require(hasRole(SHIP_ADDER_ROLE, msg.sender), "Must have ship adder role to add ship");
+        require(hasRole(msg.sender, SHIP_ADDER_ROLE), "Must have ship adder role to add ship");
 
         DockedShip memory newShip = DockedShip({
             id: hangar.length, // the 'id' is based on the current queue of ships
@@ -108,7 +117,7 @@ contract Husk is IERC721Receiver, AccessControl, Ownable {
     // TODO: should this called as a callback after _this contract_ (or %make) transfers ownership to some address?
     // TODO: implement the azimuth safeTransferFrom required to send a ship to a new user if using callbacks...?
     function transferPointToShipless(address targetAddress) public onlyRole(SHIP_REMOVER_ROLE) returns (uint256, string memory) {
-        require(hasRole(SHIP_REMOVER_ROLE, msg.sender), "Must have ship remover role to remove ship");
+        require(hasRole(msg.sender, SHIP_REMOVER_ROLE), "Must have ship remover role to remove ship");
         require(hangar.length > 0, "No more docked ships");
         // TODO: emit this as an event
 
@@ -121,7 +130,8 @@ contract Husk is IERC721Receiver, AccessControl, Ownable {
         // ecliptic.transferPoint(nextShipTokenId, targetAddress, false);
 
         // Step 3: If the transfer didn't throw, remove the ship from the stack
-        hangar.pop();
+        delete hangar[hangar.length - 1];
+        hangar.length--;
 
         emit ShipLaunched(nextShipTokenID, targetAddress, nextShip.hostedUrl);
         return (nextShip.tokenID, nextShip.hostedUrl);
