@@ -10,9 +10,12 @@
     "test": "test"
   },
   "dependencies": {
+    "@truffle/hdwallet-provider": "^2.1.13",
     "babel-polyfill": "^6.26.0",
     "babel-register": "^6.26.0",
-    "openzeppelin-solidity": "1.12.0"
+    "dotenv": "^16.3.1",
+    "openzeppelin-solidity": "1.12.0",
+    "truffle-plugin-verify": "^0.6.4"
   },
   "devDependencies": {
     "ganache-cli": "^6.12.2",
@@ -48,5 +51,8 @@
   "bugs": {
     "url": "https://github.com/urbit/azimuth/issues"
   },
-  "homepage": "https://github.com/urbit/azimuth#readme"
+  "homepage": "https://github.com/urbit/azimuth#readme",
+  "bundleDependencies": [
+    "openzeppelin-solidity"
+  ]
 }
