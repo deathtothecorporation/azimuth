@@ -115,6 +115,7 @@ contract('Husk', function([owner, user1, user2, user3, hostingProvider, makeAddr
     // can't do if not owner.
     await assertRevert(eclipt.transferPoint(0, user2, true, {from:user2}));
     // transfer as owner, resetting the point.
+    // point 0
     await seeEvents(eclipt.transferPoint(0, hostingProvider, false, {from:user1}),
                     ['Transfer']);
     assert.isTrue(await azimuth.isOwner(0, hostingProvider));
@@ -122,6 +123,7 @@ contract('Husk', function([owner, user1, user2, user3, hostingProvider, makeAddr
     // also transfer point 1 to hostingProvider
     await seeEvents(eclipt.transferPoint(1, hostingProvider, false, {from:user1}),
                     ['Transfer']);
+    assert.isTrue(await azimuth.isOwner(1, hostingProvider));
   });
 
   it('Hosting provider can deposit in Husk with safeTransferFrom', async function() {
@@ -179,6 +181,39 @@ contract('Husk', function([owner, user1, user2, user3, hostingProvider, makeAddr
     await assertRevert(
       husk.transferPointToShipless(customer, { from: makeAddress })
     );
+  });
+
+  it('Hosting provider can deposit in Husk with addDockedShipWithTransfer', async function() {
+    assert.isTrue(await azimuth.isOwner(1, hostingProvider));
+
+    // cannot do this until hosting provider has SHIP_ADDER_ROLE
+    // await assertRevert(eclipt.safeTransferFrom(hostingProvider, husk.address, 0, { from: hostingProvider }));
+
+    assert.equal(await azimuth.getTransferProxy(1), '0x0000000000000000000000000000000000000000');
+    await seeEvents(azimuth.setTransferProxy(1, husk.address, { from: hostingProvider }), ['ChangedTransferProxy']);
+    assert.equal(await azimuth.getTransferProxy(1), husk.address);
+    assert.isTrue(await azimuth.isTransferProxy(1, husk.address));
+
+    await seeEvents(husk.grantShipAdderRole(hostingProvider, { from: owner }),
+                    ['RoleAdded'])
+    assert.isTrue(await husk.hasRole(hostingProvider, SHIP_ADDER_ROLE));
+
+    let data = web3.utils.asciiToHex('https://palpel-palnet.hosting-provider.com');
+    // now it can add:
+    await seeEvents(
+      husk.addDockedShipWithTransfer(1, data, { from: hostingProvider }),
+      ['Transfer']
+  );
+
+    assert.isTrue(await azimuth.isOwner(1, husk.address));
+
+    let latestDockedShipId = await husk.getDockedShipsCount() - 1;
+    let dockedShip = await husk.getDockedShip(latestDockedShipId);
+    let tokenID = dockedShip['0'].toString()
+    let hostedUrl = dockedShip['1']
+
+    assert.equal(tokenID, 1, "Incorrect tokenID");
+    assert.equal(hostedUrl, 'https://palpel-palnet.hosting-provider.com', "Incorrect URL");
   });
 
   it('getting prefix', async function() {

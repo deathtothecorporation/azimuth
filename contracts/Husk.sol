@@ -33,17 +33,17 @@ contract Husk is IERC721Receiver, RBAC, Ownable, ReadsAzimuth {
     string public constant SHIP_ADDER_ROLE = "ship_adder";
     string public constant SHIP_REMOVER_ROLE = "ship_remover";
 
-    event ShipDocked(uint256 indexed tokenID, string hostedUrl);
-    event ShipLaunched(uint256 indexed tokenID, address indexed owner, string hostedUrl);
+    event ShipDocked(uint32 indexed tokenID, string hostedUrl);
+    event ShipLaunched(uint32 indexed tokenID, address indexed owner, string hostedUrl);
 
     struct DockedShip {
         uint256 id;
-        uint256 tokenID;
+        uint32 tokenID;
         string hostedUrl;
     }
 
     DockedShip[] private hangar;
-        
+
     constructor(Azimuth _azimuthAddress) ReadsAzimuth(_azimuthAddress) {
         // since the constructor creates these roles, the contract owner is the 'admin' for these roles.
         // and the contract owner is the DEFAULT_ADMIN_ROLE, which means nobody else can call _setupRole
@@ -70,12 +70,18 @@ contract Husk is IERC721Receiver, RBAC, Ownable, ReadsAzimuth {
     returns (bytes4) {
         // require(hasRole(msg.sender, SHIP_ADDER_ROLE), "Must have ship adder role to transfer ship");
 
+        // Ensure that the tokenId can be safely converted to a uint32
+        require(tokenID <= 4294967295, "tokenId exceeds maximum for uint32");
+
+        // Convert the tokenID to a uint32
+        uint32 tokenID32 = uint32(tokenID);
+
         // Do something when we receive an NFT
         // pull out the URL from the function call data
         string memory url = string(data);
 
         // Add it to the hangar (addDockedShip will create the struct)
-        addDockedShip(tokenID, url);
+        addDockedShip(tokenID32, url);
 
         return this.onERC721Received.selector;
     }
@@ -87,11 +93,13 @@ contract Husk is IERC721Receiver, RBAC, Ownable, ReadsAzimuth {
     // await erc721.safeTransferFrom("0xYourAddress", receivingContract.address, 1, data);
 
 
-    function addDockedShip(uint256 tokenID, string memory hostedUrl) public {
+    function addDockedShip(uint32 tokenID, string memory hostedUrl) public {
         // TODO: bring roles back in. currently failing in integration tests for some reason.
         // require(hasRole(msg.sender, SHIP_ADDER_ROLE), "Must have ship adder role to dock ship");
 
         // TODO: require hostedUrl to be present?
+        // TODO: require this to actually be an azimuth point?! we don't want
+        // hosting providers accidentally sending us BAYCs
 
         DockedShip memory newShip = DockedShip({
             id: hangar.length, // the 'id' is based on the current queue of ships
@@ -103,9 +111,28 @@ contract Husk is IERC721Receiver, RBAC, Ownable, ReadsAzimuth {
         emit ShipDocked(tokenID, hostedUrl);
     }
 
+    // This function REQUIRES that the hosting provider FIRST make us the 
+    // transferProxy for this point. THEN call this function.
+    function addDockedShipWithTransfer(uint32 _point, string memory hostedUrl) public {
+        // TODO: bring roles back in. currently failing in integration tests for some reason.
+        // require(hasRole(msg.sender, SHIP_ADDER_ROLE), "Must have ship adder role to dock ship");
+
+        // TODO: require hostedUrl to be present?
+
+        // Ensure caller owns the point
+        require(azimuth.getOwner(_point) == msg.sender, "Sender must own the point");
+
+        // TODO: this won't work, because msg.sender to _ecliptic_ is Husk, not the owner.
+        // Transfer to Husk
+        IEcliptic ecliptic = IEcliptic(azimuth.owner());
+        ecliptic.transferPoint(_point, address(this), false);
+
+        addDockedShip(_point, hostedUrl);
+    }
+
 
     // Function to get the details of a docked ship
-    function getDockedShip(uint256 id) public view returns (uint256, string memory) {
+    function getDockedShip(uint256 id) public view returns (uint32, string memory) {
         require(id < hangar.length, "Invalid ship ID");
 
         DockedShip memory dockedShip = hangar[id];
@@ -120,7 +147,7 @@ contract Husk is IERC721Receiver, RBAC, Ownable, ReadsAzimuth {
     // Function to remove a docked ship (LIFO)
     // TODO: should this called as a callback after _this contract_ (or %make) transfers ownership to some address?
     // TODO: implement the azimuth safeTransferFrom required to send a ship to a new user if using callbacks...?
-    function transferPointToShipless(address targetAddress) public onlyRole(SHIP_REMOVER_ROLE) returns (uint256, string memory) {
+    function transferPointToShipless(address targetAddress) public onlyRole(SHIP_REMOVER_ROLE) returns (uint32, string memory) {
         require(hasRole(msg.sender, SHIP_REMOVER_ROLE), "Must have ship remover role to remove ship");
         require(hangar.length > 0, "No more docked ships");
         // TODO: emit this as an event
