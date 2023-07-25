@@ -1,4 +1,5 @@
 const Azimuth = artifacts.require('Azimuth');
+const Husk = artifacts.require('Husk');
 
 const assertRevert = require('./helpers/assertRevert');
 const seeEvents = require('./helpers/seeEvents');
@@ -11,6 +12,19 @@ contract('Azimuth', function([owner, user, user2, user3]) {
 
   before('setting up for tests', async function() {
     azimuth = await Azimuth.new();
+    husk = await Husk.new(azimuth.address)
+  });
+
+  it('Husk contract should receive ERC721 tokens', async function() {
+    // Mint a new token on the Azimuth contract
+    await azimuth.mint(user1, 1, { from: owner });
+
+    // Transfer the token to the Husk contract
+    await azimuth.safeTransferFrom(user1, husk.address, 1, { from: user1 });
+
+    // Check that the Husk contract received the token
+    const ownerOfToken = await azimuth.ownerOf(1);
+    assert.equal(ownerOfToken, husk.address);
   });
 
   it('getting prefix', async function() {
