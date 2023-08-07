@@ -63,7 +63,7 @@ contract Husk is RBAC, Ownable {
 
     function addDockedShip(uint32 tokenID, string memory hostedUrl) public {
         require(hasRole(msg.sender, SHIP_ADDER_ROLE), "Must have ship adder role to dock ship");
-        require(hostedUrl != "", "hostedUrl is empty")
+        require(bytes(hostedUrl).length != 0, "hostedUrl is empty");
 
         DockedShip memory newShip = DockedShip({
             tokenID: tokenID,
