@@ -9,11 +9,15 @@ const mnemonic = process.env.MNEMONIC;
 const es_key = process.env.ETHERSCAN_KEY;
 const infuraProjectId = "6b38131efce6467ca32aec6ebe619b68";
 
+const Web3 = require("web3")
+const web3 = new Web3();
+
 const provider = new HDWalletProvider({
   mnemonic: {
     phrase: mnemonic
   },
-  providerOrUrl: `https://goerli.infura.io/v3/${infuraProjectId}`,
+  // Change for goerli/main
+  providerOrUrl: `https://mainnet.infura.io/v3/${infuraProjectId}`,
   numberOfAddresses: 1,
   addressIndex: 9,
   shareNone: true,
@@ -36,6 +40,11 @@ module.exports = {
       network_id: 5, // Goerli's network ID
       gas: 5500000, // Adjust the gas limit according to your contracts
     },
+    mainnet: {
+      provider: () => provider,
+      network_id: 1,
+      // gasPrice: web3.utils.toWei('10', 'gwei'),
+    }
   },
   api_keys: {
     etherscan: es_key,
