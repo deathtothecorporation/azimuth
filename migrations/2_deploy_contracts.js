@@ -21,16 +21,16 @@ module.exports = async function(deployer, network, accounts) {
 
   // setup contracts
   // goerli
-  const azAddress = "0x9D3e931D3A35eB5b2E2F84672b3456049a21742B"
+  // const azAddress = "0x9D3e931D3A35eB5b2E2F84672b3456049a21742B"
   //
   // mainnet
-  // const azAddress = "0x9D3e931D3A35eB5b2E2F84672b3456049a21742B"
+  const azAddress = "0x223c067F8CF28ae173EE5CafEa60cA44C335fecB"
 
   // goerli
   // const huskAddress = "0x1f7a0cc2db9421a9b9017ef18e53997c26f976cc"
   //
   // mainnet
-  // const huskAddress = "0x9D3e931D3A35eB5b2E2F84672b3456049a21742B"
+  const huskAddress = "0x20b9AeE8C36E3570800440Ba4B649D61B06290F0"
 
   const tharsis = await deployer.deploy(Tharsis, azAddress, huskAddress);
 };

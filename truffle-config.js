@@ -36,6 +36,10 @@ module.exports = {
       network_id: 5, // Goerli's network ID
       gas: 5500000, // Adjust the gas limit according to your contracts
     },
+    mainnet: {
+      provider: () => provider,
+      network_id: 1,
+    }
   },
   api_keys: {
     etherscan: es_key,
