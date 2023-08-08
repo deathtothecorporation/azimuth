@@ -21,7 +21,7 @@ contract Tharsis is ERC721, Ownable, Pausable {
     IAzimuth public azimuth;
     IHusk public husk;
 
-    string public constant DEFAULT_URI = "https://pastebin.com/raw/6WvciCXx";
+    string public constant DEFAULT_URI = "ipfs://QmawbbgwEmxNrH9tt5g7tgCYRDEKN9B8yGvnuupcM4tfPN/";
 
     constructor(address _azimuth, address _husk) ERC721("Tharsis Video Game Token", "TVG") {
       azimuth = IAzimuth(_azimuth);

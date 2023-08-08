@@ -20,12 +20,14 @@ module.exports = async function(deployer, network, accounts) {
   await deployer;
 
   // setup contracts
-  // const azimuth = await deployer.deploy(Azimuth);
   // goerli
   const azAddress = "0x9D3e931D3A35eB5b2E2F84672b3456049a21742B"
+  //
+  // mainnet
+  // const azAddress = "0x9D3e931D3A35eB5b2E2F84672b3456049a21742B"
 
   // goerli
-  const huskAddress = "0x1f7a0cc2db9421a9b9017ef18e53997c26f976cc"
+  // const huskAddress = "0x1f7a0cc2db9421a9b9017ef18e53997c26f976cc"
   //
   // mainnet
   // const huskAddress = "0x9D3e931D3A35eB5b2E2F84672b3456049a21742B"
