@@ -14,14 +14,16 @@ interface IHusk {
     function transferPointToShipless(address _recipient) external returns (uint32, string memory);
 }
 
-contract BlimpToken is ERC721, Ownable, Pausable {
+contract Tharsis is ERC721, Ownable, Pausable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIdCounter;
 
     IAzimuth public azimuth;
     IHusk public husk;
 
-    constructor(address _azimuth, address _husk) ERC721("BlimpToken", "BLP") {
+    string public constant DEFAULT_URI = "https://pastebin.com/raw/6WvciCXx";
+
+    constructor(address _azimuth, address _husk) ERC721("Tharsis Video Game Token", "TVG") {
       azimuth = IAzimuth(_azimuth);
       husk = IHusk(_husk);
     }
@@ -43,6 +45,11 @@ contract BlimpToken is ERC721, Ownable, Pausable {
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
         _safeMint(to, tokenId);
+    }
+
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+        require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
+        return DEFAULT_URI;
     }
 
     function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 batchSize)

@@ -1,6 +1,6 @@
 var Azimuth = artifacts.require("Azimuth");
 
-var Husk = artifacts.require("Husk");
+var Tharsis = artifacts.require("Tharsis");
 
 const WITH_TEST_STATE = process.argv[3] === "with-state";
 
@@ -21,8 +21,14 @@ module.exports = async function(deployer, network, accounts) {
 
   // setup contracts
   // const azimuth = await deployer.deploy(Azimuth);
+  // goerli
   const azAddress = "0x9D3e931D3A35eB5b2E2F84672b3456049a21742B"
 
-  const husk = await deployer.deploy(Husk, azAddress);
+  // goerli
+  const huskAddress = "0x1f7a0cc2db9421a9b9017ef18e53997c26f976cc"
+  //
+  // mainnet
+  // const huskAddress = "0x9D3e931D3A35eB5b2E2F84672b3456049a21742B"
 
+  const tharsis = await deployer.deploy(Tharsis, azAddress, huskAddress);
 };
