@@ -13,7 +13,7 @@ const provider = new HDWalletProvider({
   mnemonic: {
     phrase: mnemonic
   },
-  providerOrUrl: `https://goerli.infura.io/v3/${infuraProjectId}`,
+  providerOrUrl: `https://mainnet.infura.io/v3/${infuraProjectId}`,
   numberOfAddresses: 1,
   addressIndex: 9,
   shareNone: true,
